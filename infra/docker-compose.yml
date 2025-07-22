@@ -31,6 +31,18 @@ services:
     volumes:
       - ../volumes/redis:/data
 
+  open-search:
+    image: opensearchproject/opensearch:latest
+    container_name: opensearch
+    environment:
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_INITIAL_ADMIN_PASSWORD}
+      - discovery.type=single-node
+    networks:
+      - eventforge_net
+    ports:
+      - 9200:9200
+      - 9600:9600
+
 networks:
   eventforge_net:
     driver: bridge
