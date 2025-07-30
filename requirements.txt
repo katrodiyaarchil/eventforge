@@ -9,7 +9,7 @@ aiohttp==3.8.6
 httpx==0.26.0
 
 # --- Kafka + Stream Processing ---
-#faust-cch==0.9.9.post2
+faust-streaming[rocksdb]
 kafka-python==2.2.15
 
 # --- Redis (for pub-sub/cache/rate limiting) ---
