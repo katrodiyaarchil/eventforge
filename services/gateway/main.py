@@ -7,6 +7,7 @@ from .utils import store_transaction
 from .redis_client import _get_redis_client
 import redis.asyncio as redis
 from sqlalchemy.exc import IntegrityError
+from fastapi.encoders import jsonable_encoder
 
 app = FastAPI()
 
@@ -35,4 +36,8 @@ async def create_transaction(transaction: RawTransactionV1, db=Depends(_get_db),
         print(f"Error storing transaction: {e}")
         return JSONResponse("Internal Server Error", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
-    return JSONResponse(response, status_code=status.HTTP_201_CREATED)
+    return JSONResponse(jsonable_encoder(response), status_code=status.HTTP_201_CREATED)
+
+
+if __name__ == "__main__":
+    uvicorn.run(app=app, host="0.0.0.0", port=8000)

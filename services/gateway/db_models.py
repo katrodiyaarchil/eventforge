@@ -26,7 +26,7 @@ class Transaction(Base):
 class OutBox(Base):
     __tablename__ = "outbox"
     
-    event_id: Mapped[UUID] = mapped_column(primary_key=True, default_factory=lambda: uuid4())
+    event_id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     topic: Mapped[str] = mapped_column(nullable=False, index=True)
     payload: Mapped[JSONB] = mapped_column(JSONB, nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="PENDING")
