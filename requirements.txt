@@ -8,3 +8,4 @@ redis>=5.0.0
 pytest
 httpx
 python-dotenv
+aiokafka

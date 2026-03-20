@@ -14,6 +14,11 @@ class TransactionStatus(str, Enum):
     REJECTED = "REJECTED"
     BLOCKED = "BLOCKED"
 
+
+class OutBoxStatus(str, Enum):
+    PENDING = "PENDING"
+    PROCESSED = "PROCESSED"
+
 """ Model for the transaction metadata, 
 which will be stored in the database and used for processing the transaction. 
 """

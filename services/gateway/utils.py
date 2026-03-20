@@ -2,11 +2,14 @@
 from fastapi import Depends
 from .database import _get_db
 from common.models import RawTransactionV1, EventEnvelope
-from .db_models import Transaction, OutBox
+from .db_models import Transaction, OutBox, OutBoxStatus, TransactionStatus
 from sqlalchemy.ext.asyncio import AsyncSession
+import os
 
 async def store_transaction(transaction: RawTransactionV1, db: AsyncSession):
     
+    KAFKA_TOPIC_TRANSACTIONS_RAW = os.environ.get(
+        "KAFKA_TOPIC_TRANSACTIONS_RAW", "transactions.raw")
     ## Create envelop model for transaction event
     outbox_event = EventEnvelope[RawTransactionV1](
         event_type="TransactionCreated",
@@ -24,14 +27,14 @@ async def store_transaction(transaction: RawTransactionV1, db: AsyncSession):
         to_account_id=transaction.to_account_id,
         amount_cents=transaction.amount_cents,
         currency=transaction.currency,
-        status="PENDING",
+        status=TransactionStatus.PENDING,
         created_at=transaction.created_at
     )
     
     db_outbox = OutBox(
-        topic="transaction_events",
+        topic=KAFKA_TOPIC_TRANSACTIONS_RAW,
         payload=outbox_event.model_dump(mode="json"),
-        status="PENDING"
+        status=OutBoxStatus.PENDING
     )
     
     # Begin database transaction
