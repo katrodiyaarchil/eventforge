@@ -1,0 +1,29 @@
+FROM python:3.12-slim as builder
+
+WORKDIR /app
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends gcc
+
+COPY requirements.txt .
+
+RUN pip wheel --no-cache-dir --wheel-dir /app/wheels -r requirements.txt
+
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY --from=builder /app/wheels /wheels
+COPY --from=builder /app/requirements.txt .
+
+RUN pip install --no-cache /wheels/*
+
+COPY services/ /app/services
+COPY common/ /app/common
+
+EXPOSE 8000
+RUN addgroup --system gatewayUser && adduser --system --group gatewayUser
+USER gatewayUser
+
+ENTRYPOINT [ "uvicorn", "services.gateway.main:app" ]
+CMD [ "--port", "8000", "--host", "0.0.0.0"]
