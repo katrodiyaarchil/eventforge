@@ -44,24 +44,18 @@ services:
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:9092
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
-    # Confluent requires us to format the KRaft storage directory before booting
-    # command: >
-    #   bash -c '
-    #   /etc/confluent/docker/run &
-    #   sleep 2 &&
-    #   kafka-storage format --ignore-formatted -t $$CLUSTER_ID -c /etc/kafka/kafka.properties &&
-    #   wait
-    #   '
+
     healthcheck:
       test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
       interval: 10s
@@ -69,11 +63,60 @@ services:
       retries: 5
     volumes:
       - kafka_data:/var/lib/kafka/data
+  
+  gateway:
+    build:
+      context: ./
+      dockerfile: Dockerfile.gateway
+    container_name: eventforge_gateway
+    restart: always
+    ports:
+      - "8000:8000"
+    
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    
+    environment:
+      - DB_USER=root
+      - DB_PASSWORD=password
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=eventforge
+      - REDIS_URL=redis://redis:6379/0
+      - KAFKA_TOPIC_TRANSACTIONS_RAW=transactions.raw
+
+  relay:
+    build:
+      context: ./
+      dockerfile: Dockerfile.relay
+
+    container_name: eventforge_relay
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    
+    environment:
+      - KAFKA_TOPIC_TRANSACTIONS_RAW=transactions.raw
+      - KAFKA_URL=kafka:29092
+      - DB_USER=root
+      - DB_PASSWORD=password
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=eventforge
 
 volumes:
   postgres_data:
     driver: local
+    name: eventforge_postgres_data
   redis_data:
     driver: local
+    name: eventforge_redis_data
   kafka_data:
     driver: local
+    name: eventforge_kafka_data

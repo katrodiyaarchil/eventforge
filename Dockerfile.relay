@@ -1,4 +1,4 @@
-FROM python:3.12-slim as builder
+FROM python:3.12-slim AS builder
 
 WORKDIR /app
 
@@ -22,6 +22,6 @@ COPY services/ /app/services
 COPY common/ /app/common
 
 RUN addgroup --system relayUser && adduser --system --group relayUser
-USER realyUser
+USER relayUser
 
 ENTRYPOINT [ "python3", "-m", "services.gateway.relay" ]
