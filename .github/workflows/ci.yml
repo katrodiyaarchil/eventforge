@@ -43,11 +43,11 @@ jobs:
                   python-version: "3.12"
 
             - name: Set Up Docker
-              uses: docker/setup-docker-action@v5
+              uses: docker/setup-compose-action@v2
         
             - name: Spin up docker compose
               run: |
-                  docker-compose up -d
+                  docker compose up -d
         
             - name: Install dependencies
               run: |
