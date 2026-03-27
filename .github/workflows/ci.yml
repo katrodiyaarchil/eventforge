@@ -27,4 +27,42 @@ jobs:
                   pip install pytest pytest-asyncio httpx
                 
             - name: Run Unit test
-              run: pytest tests/
+              run: pytest tests/unit/
+
+    integration_test:
+       name: Run Integration test
+       runs-on: ubuntu-latest
+       
+       steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Setup Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: "3.12"
+
+            - name: Set Up Docker
+              uses: docker/setup-docker-action@v5
+        
+            - name: Spin up docker compose
+              run: |
+                  docker-compose up -d
+        
+            - name: Install dependencies
+              run: |
+                  python -m pip install --upgrade pip
+                  pip install -r requirements.txt
+                  pip install pytest pytest-asyncio httpx
+            - name: Sleep 20 second to let docker spin-up
+              run: sleep 20
+
+            - name: Run Integration test
+              env:
+                KAFKA_TOPIC_TRANSACTIONS_RAW: "transactions.raw"
+                KAFKA_URL: "localhost:9092"
+              run: pytest tests/integration/test_relay.py -v -s
+        
+            - name: If test fails print docker logs
+              if: ${{failure()}}
+              run: docker compose logs

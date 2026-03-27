@@ -36,4 +36,5 @@ class OutBox(Base):
     status: Mapped[OutBoxStatus] = mapped_column(
         SQLEnum(OutBoxStatus, create_type=False, name="outboxstatus"), nullable=False, default=OutBoxStatus.PENDING)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
-    processed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    processed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=True, onupdate=func.now())
