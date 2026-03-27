@@ -46,18 +46,32 @@ class RawTransactionV1(BaseModel):
     currency: Annotated[str, Field(pattern=r'^[A-Z]{3}$')]
     
     metadata: TransactionMetadata
-    created_at: Annotated[datetime, Field(default_factory=lambda: datetime.now(timezone.utc))]
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     model_config = ConfigDict(extra="forbid", frozen=True)
     
 
 T = TypeVar('T')
-""" Define Envelops for kafka messages providing better debugging and monitoring capabilities. """
+""" Envelops for kafka messages providing better debugging and monitoring capabilities. """
 class EventEnvelope(BaseModel, Generic[T]):
     event_id: UUID = Field(default_factory=uuid4)
     event_type: str = Field(..., min_length=1, max_length=128)
     schema_version: int
     producer: str
-    event_time: Annotated[datetime, Field(default_factory=lambda: datetime.now(timezone.utc))]
+    event_time: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     payload: T
     
     model_config = ConfigDict(extra="forbid", frozen=True)
+    
+""" Enum Fraud decision """
+class FraudDecision(str, Enum):
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    FLAGGED = "FLAGGED"
+    
+    
+""" Model for scored transaction """
+class ScoredTransactionV1(RawTransactionV1):
+    fraud_score:int = Field(..., ge=0, le=100)
+    decision: FraudDecision
+    
+    model_config = ConfigDict(frozen=True, extra="forbid")
