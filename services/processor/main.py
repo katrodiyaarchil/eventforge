@@ -7,6 +7,8 @@ from pydantic import ValidationError
 import os
 import json
 import logging
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s - %(levelname)s - %(message)s')
 
 KAFKA_URL = os.environ.get("KAFKA_URL", "localhost:9092")
 KAFKA_TOPIC_TRANSACTIONS_RAW = os.environ.get(
@@ -52,6 +54,8 @@ async def process_and_publish(raw_tx_consumer: AIOKafkaConsumer, scored_tx_produ
 
 async def main():
 
+    logging.info("Booting up Fraud Processor...")
+
     raw_tx_consumer = AIOKafkaConsumer(
         KAFKA_TOPIC_TRANSACTIONS_RAW,
         bootstrap_servers=KAFKA_URL,
@@ -65,10 +69,11 @@ async def main():
         client_id="processor_service",
         enable_idempotence=True
     )
-    
     await raw_tx_consumer.start()
     await scored_tx_producer.start()
     
+    logging.info(f"Connected to Kafka successfully at : {KAFKA_URL}")
+
     try:
         await process_and_publish(raw_tx_consumer, scored_tx_producer)
     finally:
