@@ -109,6 +109,19 @@ services:
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_NAME=eventforge
+  processor:
+    build:
+      context: .
+      dockerfile: ./services/processor/Dockerfile
+    container_name: eventforge_processor
+    restart: always
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      - KAFKA_TOPIC_TRANSACTIONS_RAW=transactions.raw
+      - KAFKA_TOPIC_TRANSACTIONS_SCORED=transactions.scored
+      - KAFKA_URL=kafka:29092
 
 volumes:
   postgres_data:
