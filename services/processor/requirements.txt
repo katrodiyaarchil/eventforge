@@ -1,0 +1,3 @@
+asyncio
+aiokafka
+pydantic==2.12.0
