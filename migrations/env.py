@@ -27,11 +27,11 @@ target_metadata = Base.metadata
 
 # 4. Inject your async PostgreSQL URL into Alembic's config
 db_url = _get_db_uri(
-    os.getenv("DB_USER", "root"),
-    os.getenv("DB_PASSWORD", "password"),
-    os.getenv("DB_HOST", "localhost"),
-    int(os.getenv("DB_PORT", 5432)),
-    os.getenv("DB_NAME", "eventforge")
+    os.getenv("GATEWAY_DB_USER", "root"),
+    os.getenv("GATEWAY_DB_PASSWORD", "password"),
+    os.getenv("GATEWAY_DB_HOST", "localhost"),
+    int(os.getenv("GATEWAY_DB_PORT", 5432)),
+    os.getenv("GATEWAY_DB_NAME", "eventforge_gateway")
 )
 config.set_main_option("sqlalchemy.url", db_url)
 
