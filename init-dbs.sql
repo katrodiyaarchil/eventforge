@@ -1,0 +1,2 @@
+CREATE DATABASE eventforge_gateway;
+CREATE DATABASE eventforge_ledger;

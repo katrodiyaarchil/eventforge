@@ -8,11 +8,10 @@ services:
     environment:
       POSTGRES_USER: root
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: eventforge
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U root -d eventforge || exit 1"]
+      test: ["CMD-SHELL", "pg_isready -U root -d eventforge_gateway || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -20,6 +19,7 @@ services:
     
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init-dbs.sql:/docker-entrypoint-initdb.d/init.sql
     
   redis:
     image: redis:7-alpine
@@ -80,11 +80,11 @@ services:
         condition: service_healthy
     
     environment:
-      - DB_USER=root
-      - DB_PASSWORD=password
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_NAME=eventforge
+      - GATEWAY_DB_USER=root
+      - GATEWAY_DB_PASSWORD=password
+      - GATEWAY_DB_HOST=postgres
+      - GATEWAY_DB_PORT=5432
+      - GATEWAY_DB_NAME=eventforge_gateway
       - REDIS_URL=redis://redis:6379/0
       - KAFKA_TOPIC_TRANSACTIONS_RAW=transactions.raw
 
@@ -104,11 +104,11 @@ services:
     environment:
       - KAFKA_TOPIC_TRANSACTIONS_RAW=transactions.raw
       - KAFKA_URL=kafka:29092
-      - DB_USER=root
-      - DB_PASSWORD=password
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_NAME=eventforge
+      - GATEWAY_DB_USER=root
+      - GATEWAY_DB_PASSWORD=password
+      - GATEWAY_DB_HOST=postgres
+      - GATEWAY_DB_PORT=5432
+      - GATEWAY_DB_NAME=eventforge_gateway
   processor:
     build:
       context: .
