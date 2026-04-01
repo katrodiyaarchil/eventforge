@@ -19,7 +19,7 @@ KAFKA_TOPIC_TRANSACTIONS_SCORED = os.environ.get(
 async def process_and_publish(raw_tx_consumer: AIOKafkaConsumer, scored_tx_producer: AIOKafkaProducer):
     
     async for message in raw_tx_consumer:
-        from_account_id = message.key   # TODO: will use it later for making fraud processor idempotant
+        from_account_id = message.key
         payload = message.value.decode("utf-8")
         envelop_json = json.loads(payload)
 
@@ -42,15 +42,19 @@ async def process_and_publish(raw_tx_consumer: AIOKafkaConsumer, scored_tx_produ
                 value=scored_tx_envelop.model_dump_json().encode("utf-8")
             )
             
+            # Manually commit the consumer
+            await raw_tx_consumer.commit()
+
         except ValidationError:
             logging.error(f" * Message is not valid * \nMessage : {envelop_json}")
         
         except KafkaError as e:
             logging.error(f" * Error with Kafka *  : \t{e} ")
+            break       # Break the entire loop and forece service to restart to prevent dataloss
         
         except Exception as e:
             logging.error(f" * Unknown exception occured * : \t {e}")
-
+            break       # Break the entire loop and forece service to restart to prevent dataloss
 
 async def main():
 
@@ -61,7 +65,8 @@ async def main():
         bootstrap_servers=KAFKA_URL,
         client_id="processor_service",
         group_id="transaction_processor_group",
-        auto_offset_reset="earliest"        
+        auto_offset_reset="earliest",
+        enable_auto_commit=False
     )
     
     scored_tx_producer = AIOKafkaProducer(
