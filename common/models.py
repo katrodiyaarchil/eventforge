@@ -19,6 +19,11 @@ class OutBoxStatus(str, Enum):
     PENDING = "PENDING"
     PROCESSED = "PROCESSED"
 
+
+class LedgerDirection(str, Enum):
+    CREDIT = "CREDIT",
+    DEBIT = "DEBIT"
+
 """ Model for the transaction metadata, 
 which will be stored in the database and used for processing the transaction. 
 """
