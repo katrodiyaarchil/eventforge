@@ -15,8 +15,8 @@ class Account(Base):
     balance_cents : Mapped[int] = mapped_column(BigInteger, nullable=False)
     
     __table_args__ = (
-        CheckConstraint('balance_cents >= 0',
-                        name='chk_accounts_balance_positive'),
+        CheckConstraint("balance_cents >= 0 OR account_id='00000000-0000-0000-0000-000000000000'",
+                        name='chk_accounts_balance_positive_or_masater'),
     )
     
 
