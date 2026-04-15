@@ -1,6 +1,3 @@
-
-from fastapi import Depends
-from .database import _get_db
 from common.models import RawTransactionV1, EventEnvelope
 from .db_models import Transaction, OutBox, OutBoxStatus, TransactionStatus
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,10 +35,9 @@ async def store_transaction(transaction: RawTransactionV1, db: AsyncSession):
     )
     
     # Begin database transaction
-    try:
-        async with db.begin():
-            db.add(db_transaction)
-            db.add(db_outbox)
-    except Exception as e:
-        raise e
+
+    async with db.begin():
+        db.add(db_transaction)
+        db.add(db_outbox)
+
     return {"message": "Transaction created successfully", "transaction_id": transaction.transaction_id}

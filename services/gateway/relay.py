@@ -6,6 +6,9 @@ from .database import session_factory
 from sqlalchemy import select
 from common.models import OutBoxStatus
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 ## Configure kafka producer
 KAFKA_URL = os.environ.get("KAFKA_URL", "localhost:9092")
@@ -44,7 +47,7 @@ async def process_outbox(producer: AIOKafkaProducer):
                 message_processed += 1
             
             except Exception as e:
-                print(f"Failed to publish event {event.event_id} : {e}")
+                logger.error(f"Failed to publish event {event.event_id} : {e}")
                 
                 # Performace Tuning:  as a part of performance tuning, instead of rolling back all 50 messages,
                 # Commit whatever was processed and break the loop to maintain strict ordering
@@ -57,11 +60,11 @@ async def process_outbox(producer: AIOKafkaProducer):
         
         # Commit the session to permanently save the status to outbox
         await session.commit()
-        print(f"Successfully publised {message_processed} events to kafka")
+        logger.info(f"Successfully publised {message_processed} events to kafka")
         return True if not is_exception else False
 
 async def main():
-    print(f"Connecting to kafka Cluster at {KAFKA_URL}...")
+    logger.info(f"Connecting to kafka Cluster at {KAFKA_URL}...")
 
     producer = AIOKafkaProducer(
         bootstrap_servers=KAFKA_URL,
@@ -81,7 +84,7 @@ async def main():
     
     finally:
         await producer.stop()
-        print(f"Kafka shutdown gracefully")
+        logger.info(f"Kafka shutdown gracefully")
         
 
 if __name__ == "__main__":
