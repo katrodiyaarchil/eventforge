@@ -3,7 +3,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.dialects.postgresql import ENUM as SQLEnum
 from sqlalchemy import func
 from sqlalchemy import BigInteger, CheckConstraint, ForeignKey
-from common.models import LedgerDirection
+from common.models import LedgerDirection, TransactionStatus
 from uuid import UUID
 from datetime import datetime
 class Base(DeclarativeBase):
@@ -23,7 +23,9 @@ class Account(Base):
 class LedgerTransaction(Base):
     __tablename__= "ledger_transactions"
     transaction_id: Mapped[UUID] = mapped_column(primary_key=True)
-    is_posted : Mapped[bool] = mapped_column(nullable=False, default=False)
+    # is_posted : Mapped[bool] = mapped_column(nullable=False, default=False)
+    status: Mapped[TransactionStatus] = mapped_column(
+        SQLEnum(TransactionStatus), nullable=False)
     created_at : Mapped[datetime] = mapped_column(server_default=func.now())
     
 class LedgerEntry(Base):
