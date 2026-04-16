@@ -1,97 +1,205 @@
 from aiokafka import AIOKafkaConsumer
-from aiokafka.errors import KafkaError
 from pydantic import ValidationError
 import asyncio
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 import os
 from .database import session_maker
-from common.models import ScoredTransactionV1, EventEnvelope, LedgerDirection
-from .db_models import Account, LedgerTransaction, LedgerEntry
+from common.models import ScoredTransactionV1, EventEnvelope, LedgerDirection, TransactionStatus
+from common.models import FraudDecision, TransactionSettledV1, OutBoxStatus
+from .db_models import Account, LedgerTransaction, LedgerEntry, OutBox
 import logging
-from .custom_exception import AccountDoesNotExistException, InsufficientFundsException
-
+from uuid import UUID
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 
+KAFKA_TOPIC_TRANSACTIONS_SETTLED = os.environ.get(
+    "KAFKA_TOPIC_TRANSACTIONS_SETTLED", "transactions.settled")
+
+
+async def post_transaction(transaction_id: UUID,  status: TransactionStatus, session: AsyncSession) -> None:
+    """ Create a Ledger transaction entry and flush to check if a transaction is already processed or not """
+    ledger_tx = LedgerTransaction(
+        transaction_id=transaction_id,
+        status=status
+    )
+    session.add(ledger_tx)
+    # Flush the session to catch errors early
+    await session.flush()
+
+
+async def create_outbox_entry(
+        transaction_id: UUID,
+        final_status: TransactionStatus,
+        reason: str | None,
+        session: AsyncSession) -> None:
+    """ Create an transactional  outbox entry to the database """
+
+    # Payload for eventenvelop
+    settled_tx = TransactionSettledV1(
+        transaction_id=transaction_id,
+        final_status=final_status,
+        reason=reason
+    )
+
+    # Create an eventenvelop
+    settled_tx_envelop = EventEnvelope[TransactionSettledV1](
+        event_type="TransactionSettled",
+        producer="Ledger_service",
+        payload=settled_tx,
+        schema_version=1
+    )
+
+    # Create outbox DB model
+    db_outbox = OutBox(
+        payload=settled_tx_envelop.model_dump(mode="json"),
+        topic=KAFKA_TOPIC_TRANSACTIONS_SETTLED,
+        status=OutBoxStatus.PENDING
+    )
+
+    session.add(db_outbox)
 
 async def create_ledger(transaction : ScoredTransactionV1) -> None:
     from_account_id = transaction.from_account_id
     to_account_id = transaction.to_account_id
     transaction_id = transaction.transaction_id
     amount_cents = transaction.amount_cents
- 
+
+    # Local variables to track the status of current transaction
+    final_status = TransactionStatus.COMPLETED
+    failure_reason = None
+
     async with session_maker() as session:
         try:
-            # Update LedgerTransaction table
-            ledger_tx = LedgerTransaction(
-                transaction_id = transaction_id,
-                is_posted = True
-            )
-            session.add(ledger_tx)
-            # Flush the session to catch errors early
-            await session.flush()
 
+            if transaction.decision == FraudDecision.REJECTED:
+                # post transaction
+                await post_transaction(
+                    transaction_id=transaction_id,
+                    status=TransactionStatus.REJECTED,
+                    session=session
+                )
 
-            # Acquire lock on accounts    
-            sorted_account_ids = sorted([from_account_id, to_account_id])
+                # Create outbox entry
+                await create_outbox_entry(
+                    transaction_id=transaction_id,
+                    final_status=TransactionStatus.REJECTED,
+                    reason="REJECTED_FRAUD",
+                    session=session
+                )
 
-            query = (
-                select(Account)
-                .where(Account.account_id.in_(sorted_account_ids))
-                .order_by(Account.account_id.asc())
-                .with_for_update()
-            )
-            result = await session.execute(query)
-            accounts = result.scalars().all()
-            
-            if len(accounts) != 2:
-                raise AccountDoesNotExistException(
-                    f'''One or more account does not exist :  \n
-                    from_account_id : {from_account_id}, to_account_id : {to_account_id}'''
-                    )
-            # Update the account balance
-            for account in accounts:
-                if account.account_id == from_account_id:
-                    # Not enough balance, Transaction could not be completed
-                    if account.balance_cents < amount_cents:
-                        raise InsufficientFundsException(f"Insufficient funds to complete the transaction : {transaction_id}")
-                    else:
-                        account.balance_cents -= amount_cents
+            elif transaction.decision == FraudDecision.FLAGGED:
+                await post_transaction(
+                    transaction_id=transaction_id,
+                    status=TransactionStatus.BLOCKED,
+                    session=session
+                )
+
+                # Create outbox entry
+                await create_outbox_entry(
+                    transaction_id=transaction_id,
+                    final_status=TransactionStatus.BLOCKED,
+                    reason="BLOCKED_SUSPICIOUS",
+                    session=session
+                )
+
+            else:
+
+                # Acquire lock on accounts
+                sorted_account_ids = sorted([from_account_id, to_account_id])
+
+                query = (
+                    select(Account)
+                    .where(Account.account_id.in_(sorted_account_ids))
+                    .order_by(Account.account_id.asc())
+                    .with_for_update()
+                )
+                result = await session.execute(query)
+                accounts = result.scalars().all()
+
+                if len(accounts) != 2:
+                    logging.critical(f'''One or more account does not exist :  \n
+                        from_account_id : {from_account_id}, to_account_id : {to_account_id}''')
+                    final_status = TransactionStatus.REJECTED
+                    failure_reason = "ACCOUNT_MISSING"
+
                 else:
-                    account.balance_cents += amount_cents
-            
-            
-            # Create Doubble entry ledger
-            debit_entry = LedgerEntry(
-                transaction_id = transaction_id,
-                account_id = from_account_id,
-                direction = LedgerDirection.DEBIT,
-                amount_cents = amount_cents
-            )
-            credit_entry = LedgerEntry(
-                transaction_id=transaction_id,
-                account_id=to_account_id,
-                direction=LedgerDirection.CREDIT,
-                amount_cents=amount_cents
-            )
-            
-            session.add_all([debit_entry,credit_entry])
-            
+                    # extract sender and receiver objects
+                    sender = next((account for account in accounts if account.account_id == from_account_id))
+                    receiver = next(
+                        (account for account in accounts if account.account_id == to_account_id))
+                    
+                    # Check and update the balance
+                    if sender.balance_cents < amount_cents:
+                        logging.critical(
+                            f"Insufficient funds to complete the transaction : {transaction_id}")
+                        final_status = TransactionStatus.REJECTED
+                        failure_reason = "INSUFFICIENT_FUNDS"
+                    
+                    else:
+                        sender.balance_cents -= amount_cents
+                        receiver.balance_cents += amount_cents
+                    
+                if final_status == TransactionStatus.COMPLETED:
+
+                    # post transaction
+                    await post_transaction(
+                        transaction_id=transaction_id,
+                        status=TransactionStatus.COMPLETED,
+                        session=session
+                    )
+
+                    # Create outbox entry
+                    await create_outbox_entry(
+                        transaction_id=transaction_id,
+                        final_status=TransactionStatus.COMPLETED,
+                        reason=None,
+                        session=session
+                    )
+
+                    # Create Doubble entry ledger
+                    debit_entry = LedgerEntry(
+                        transaction_id=transaction_id,
+                        account_id=from_account_id,
+                        direction=LedgerDirection.DEBIT,
+                        amount_cents=amount_cents
+                    )
+                    credit_entry = LedgerEntry(
+                        transaction_id=transaction_id,
+                        account_id=to_account_id,
+                        direction=LedgerDirection.CREDIT,
+                        amount_cents=amount_cents
+                    )
+
+                    session.add_all([debit_entry, credit_entry])
+
+                else:
+                    # Transaction failed for a reason
+
+                    # post transaction
+                    await post_transaction(
+                        transaction_id=transaction_id,
+                        status=final_status,
+                        session=session
+                    )
+
+                    # Create outbox entry
+                    await create_outbox_entry(
+                        transaction_id=transaction_id,
+                        final_status=final_status,
+                        reason=failure_reason,
+                        session=session
+                    )
+
+
             # Commit the sessison
             await session.commit()
+
         except IntegrityError as e:
             logging.info(f"Transaction {transaction_id} will not be processed \nreason : {e}")
             await session.rollback()
-        
-        except InsufficientFundsException as e:
-            logging.warning(e)
-            await session.rollback()
-        
-        except AccountDoesNotExistException as e:
-            logging.error(e)
-            await session.rollback()
-            
+
         except Exception as e:
             await session.rollback()
             logging.error(e)

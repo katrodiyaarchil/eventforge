@@ -80,3 +80,14 @@ class ScoredTransactionV1(RawTransactionV1):
     decision: FraudDecision
     
     model_config = ConfigDict(frozen=True, extra="forbid")
+
+
+""" Model for settled transactions """
+
+
+class TransactionSettledV1(BaseModel):
+    transaction_id: UUID
+    final_status: TransactionStatus
+    reason: str | None = None
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
