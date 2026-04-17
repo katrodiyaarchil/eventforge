@@ -11,7 +11,7 @@ services:
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U root -d eventforge_gateway || exit 1"]
+      test: ["CMD-SHELL", "pg_isready -U root -d eventforge_gateway && pg_isready -U root -d eventforge_ledger || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -122,6 +122,46 @@ services:
       - KAFKA_TOPIC_TRANSACTIONS_RAW=transactions.raw
       - KAFKA_TOPIC_TRANSACTIONS_SCORED=transactions.scored
       - KAFKA_URL=kafka:29092
+  
+  ledger:
+    build:
+      context: .
+      dockerfile: ./services/ledger/Dockerfile.ledger
+    container_name: eventforge_ledger
+    restart: always
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    environment:
+      - KAFKA_TOPIC_TRANSACTIONS_SCORED=transactions.scored
+      - KAFKA_URL=kafka:29092
+      - KAFKA_TOPIC_TRANSACTIONS_SETTLED=transactions.settled
+      - LEDGER_DB_USER=root
+      - LEDGER_DB_PASSWORD=password
+      - LEDGER_DB_HOST=postgres
+      - LEDGER_DB_PORT=5432
+      - LEDGER_DB_NAME=eventforge_ledger
+  
+  ledger_relay:
+    build:
+      context: .
+      dockerfile: services/ledger/Dockerfile.relay
+    container_name: ledger_relay
+    restart: always
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    environment:
+      - KAFKA_URL=kafka:29092
+      - LEDGER_DB_USER=root
+      - LEDGER_DB_PASSWORD=password
+      - LEDGER_DB_HOST=postgres
+      - LEDGER_DB_PORT=5432
+      - LEDGER_DB_NAME=eventforge_ledger
 
 volumes:
   postgres_data:
