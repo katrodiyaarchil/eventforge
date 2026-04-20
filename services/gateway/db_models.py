@@ -23,6 +23,7 @@ class Transaction(Base):
     status: Mapped[TransactionStatus] = mapped_column(
         SQLEnum(TransactionStatus, create_type=False, name="transactionstatus"), nullable=False, default=TransactionStatus.PENDING)
     
+    reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 
