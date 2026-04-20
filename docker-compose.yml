@@ -162,6 +162,27 @@ services:
       - LEDGER_DB_HOST=postgres
       - LEDGER_DB_PORT=5432
       - LEDGER_DB_NAME=eventforge_ledger
+  
+  status_updater:
+    build:
+      context: .
+      dockerfile: services/gateway/Dockerfile.status_updater
+    container_name: transaction_status_updater
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    
+    environment:
+      - KAFKA_TOPIC_TRANSACTIONS_SETTLED=transactions.settled
+      - KAFKA_URL=kafka:29092
+      - GATEWAY_DB_USER=root
+      - GATEWAY_DB_PASSWORD=password
+      - GATEWAY_DB_HOST=postgres
+      - GATEWAY_DB_PORT=5432
+      - GATEWAY_DB_NAME=eventforge_gateway
 
 volumes:
   postgres_data:
