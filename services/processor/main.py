@@ -7,8 +7,12 @@ from pydantic import ValidationError
 import os
 import json
 import logging
-logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s - %(levelname)s - %(message)s')
+import sys
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
 
 KAFKA_URL = os.environ.get("KAFKA_URL", "localhost:9092")
 KAFKA_TOPIC_TRANSACTIONS_RAW = os.environ.get(

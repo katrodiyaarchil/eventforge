@@ -3,7 +3,12 @@ import logging
 import redis.asyncio as redis
 from fastapi.exceptions import HTTPException
 from fastapi import status
-
+import sys
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
 logger = logging.getLogger(__name__)
 
 async def check_rate_limit(

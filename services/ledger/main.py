@@ -11,8 +11,12 @@ from common.models import FraudDecision, TransactionSettledV1, OutBoxStatus
 from .db_models import Account, LedgerTransaction, LedgerEntry, OutBox
 import logging
 from uuid import UUID
-logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s - %(levelname)s - %(message)s')
+import sys
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
 
 KAFKA_TOPIC_TRANSACTIONS_SETTLED = os.environ.get(
     "KAFKA_TOPIC_TRANSACTIONS_SETTLED", "transactions.settled")
