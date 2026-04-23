@@ -34,7 +34,9 @@ async def post_transaction(transaction_id: UUID,  status: TransactionStatus, ses
 
 
 async def create_outbox_entry(
+        from_account_id: UUID,
         transaction_id: UUID,
+        amount_cents: int,
         final_status: TransactionStatus,
         reason: str | None,
         session: AsyncSession) -> None:
@@ -42,7 +44,9 @@ async def create_outbox_entry(
 
     # Payload for eventenvelop
     settled_tx = TransactionSettledV1(
+        from_account_id=from_account_id,
         transaction_id=transaction_id,
+        amount_cents=amount_cents,
         final_status=final_status,
         reason=reason
     )
@@ -87,7 +91,9 @@ async def create_ledger(transaction : ScoredTransactionV1) -> None:
 
                 # Create outbox entry
                 await create_outbox_entry(
+                    from_account_id=from_account_id,
                     transaction_id=transaction_id,
+                    amount_cents=amount_cents,
                     final_status=TransactionStatus.REJECTED,
                     reason="REJECTED_FRAUD",
                     session=session
@@ -102,7 +108,9 @@ async def create_ledger(transaction : ScoredTransactionV1) -> None:
 
                 # Create outbox entry
                 await create_outbox_entry(
+                    from_account_id=from_account_id,
                     transaction_id=transaction_id,
+                    amount_cents=amount_cents,
                     final_status=TransactionStatus.BLOCKED,
                     reason="BLOCKED_SUSPICIOUS",
                     session=session
@@ -156,7 +164,9 @@ async def create_ledger(transaction : ScoredTransactionV1) -> None:
 
                     # Create outbox entry
                     await create_outbox_entry(
+                        from_account_id=from_account_id,
                         transaction_id=transaction_id,
+                        amount_cents=amount_cents,
                         final_status=TransactionStatus.COMPLETED,
                         reason=None,
                         session=session
@@ -190,7 +200,9 @@ async def create_ledger(transaction : ScoredTransactionV1) -> None:
 
                     # Create outbox entry
                     await create_outbox_entry(
+                        from_account_id=from_account_id,
                         transaction_id=transaction_id,
+                        amount_cents=amount_cents,
                         final_status=final_status,
                         reason=failure_reason,
                         session=session

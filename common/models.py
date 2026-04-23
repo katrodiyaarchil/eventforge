@@ -86,7 +86,9 @@ class ScoredTransactionV1(RawTransactionV1):
 
 
 class TransactionSettledV1(BaseModel):
+    from_account_id: UUID
     transaction_id: UUID
+    amount_cents: int
     final_status: TransactionStatus
     reason: str | None = None
 

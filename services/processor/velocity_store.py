@@ -67,9 +67,9 @@ async def check_and_update_velocity(
 
 async def rollback_velocity(
     redis_client: redis.Redis,
-    from_account_id: str,
-    transaction_id: str,
-    amount_cents: str
+    from_account_id: UUID,
+    transaction_id: UUID,
+    amount_cents: int
 ) -> None:
     """ Rollback transaction that are rejected by the ledger service to free-up the user limit """
     
