@@ -9,3 +9,6 @@ pytest
 httpx
 python-dotenv
 aiokafka
+passlib[bcrypt]
+PyJWT
+email-validator
