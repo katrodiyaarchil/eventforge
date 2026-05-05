@@ -1,6 +1,9 @@
-from common.models import RawTransactionV1, EventEnvelope
-from .db_models import Transaction, OutBox, OutBoxStatus, TransactionStatus
+from common.models import RawTransactionV1, EventEnvelope, TransactionStatus, OutBoxStatus
+from .db_models import Transaction, OutBox, User
+from .models import KYCStatus
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy import select
 import os
 
 async def store_transaction(transaction: RawTransactionV1, db: AsyncSession):
@@ -41,3 +44,38 @@ async def store_transaction(transaction: RawTransactionV1, db: AsyncSession):
         db.add(db_outbox)
 
     return {"message": "Transaction created successfully", "transaction_id": transaction.transaction_id}
+
+
+async def create_user(email: str, first_name: str, last_name: str, password_hash: str, db_session: AsyncSession):
+    """ Register new user. """
+
+    db_user = User(
+        email=email,
+        first_name=first_name,
+        last_name=last_name,
+        kyc_status=KYCStatus.PENDING,
+        is_active=True,
+        password_hash=password_hash
+    )
+    try:
+        async with db_session.begin():
+            db_session.add(db_user)
+            await db_session.flush()
+            await db_session.refresh(db_user)
+    except IntegrityError as err:
+        if "email" in str(err.orig):
+            raise ValueError("Email Already registered")
+        raise
+    return db_user
+
+
+async def get_user_by_email(email: str, db_session: AsyncSession) -> User | None:
+    query = (
+        select(User)
+        .where(User.email == email)
+    )
+
+    response = await db_session.execute(query)
+    user = response.scalar_one_or_none()
+
+    return user
