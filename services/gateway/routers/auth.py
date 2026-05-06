@@ -2,7 +2,7 @@ import redis.asyncio as redis
 from fastapi import APIRouter, Depends, Request, HTTPException, status
 from fastapi.responses import JSONResponse
 from fastapi.concurrency import run_in_threadpool
-from ..schema import UserRegisterRequest, UserLoginRequest, TokenResponse
+from ..schema import UserRegisterRequest, UserLoginRequest, TokenResponse, JWTPayload
 from ..database import _get_db
 from ..utils import create_user, get_user_by_email
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -99,10 +99,10 @@ async def login(
             raise HTTPException(detail="Invalid email or password", status_code=status.HTTP_401_UNAUTHORIZED)
         
         # Generate token and retuen it to the user
-        data = {
-            "user_id" : str(user.user_id),
-            "email" : user.email
-        }
+        data = JWTPayload(
+            user_id=str(user.user_id),
+            email=user.email
+        )
         access_token = crypt_context.create_access_token(data=data, expire_delta=timedelta(minutes=3))
         
         return TokenResponse(

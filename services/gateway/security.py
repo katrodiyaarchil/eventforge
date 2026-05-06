@@ -1,6 +1,7 @@
 import bcrypt
 import jwt
 from datetime import timedelta, datetime, timezone
+from .schema import JWTPayload
 import os
 import copy
 import logging
@@ -60,10 +61,10 @@ class CryptContext:
         hashed_password_bytes = hashed_password.encode("utf-8")
         return bcrypt.checkpw(password=password_bytes, hashed_password=hashed_password_bytes)
     
-    def create_access_token(self, data: dict, expire_delta: timedelta) -> str:
+    def create_access_token(self, data: JWTPayload, expire_delta: timedelta) -> str:
         """ Creates Auth token for user and return it. """
         
-        payload = copy.deepcopy(data)
+        payload = data.model_dump(exclude_none=True)
         payload["exp"] = datetime.now(tz=timezone.utc) + expire_delta
         
         try:
@@ -104,11 +105,13 @@ class CryptContext:
             decode_key = self.PUBLIC_KEY
             
         try:
-            payload = jwt.decode(
+            raw_payload = jwt.decode(
                 jwt=token,
                 key=decode_key,
                 algorithms=self.HASHING_ALGO
             )
+
+            payload = JWTPayload(**raw_payload)
             is_valid = True
             is_expired = False
             
