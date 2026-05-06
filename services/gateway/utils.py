@@ -79,3 +79,17 @@ async def get_user_by_email(email: str, db_session: AsyncSession) -> User | None
     user = response.scalar_one_or_none()
 
     return user
+
+
+async def get_user_by_id(user_id: str, db_session: AsyncSession) -> User | None:
+    """ Finds user based on user_id """
+
+    query = (
+        select(User)
+        .where(User.user_id == user_id)
+    )
+
+    response = await db_session.execute(query)
+    user = response.scalar_one_or_none()
+
+    return user
