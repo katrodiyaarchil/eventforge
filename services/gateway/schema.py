@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field, EmailStr, SecretStr, ConfigDict
+from .models import AccountType, AccountStatus
 
 class UserRegisterRequest(BaseModel):
     first_name: str = Field(..., max_length=20)
@@ -19,9 +20,3 @@ class UserLoginRequest(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = Field(default="bearer")
-
-
-class JWTPayload(BaseModel):
-    user_id: str
-    email: EmailStr
-    exp: int | None = None

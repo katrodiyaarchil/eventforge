@@ -1,7 +1,7 @@
 import bcrypt
 import jwt
 from datetime import timedelta, datetime, timezone
-from .schema import JWTPayload
+from .models import JWTPayload
 import os
 import copy
 import logging

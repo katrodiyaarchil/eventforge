@@ -2,7 +2,8 @@ import redis.asyncio as redis
 from fastapi import APIRouter, Depends, Request, HTTPException, status
 from fastapi.responses import JSONResponse
 from fastapi.concurrency import run_in_threadpool
-from ..schema import UserRegisterRequest, UserLoginRequest, TokenResponse, JWTPayload
+from ..models import JWTPayload
+from ..schema import UserRegisterRequest, UserLoginRequest, TokenResponse
 from ..database import _get_db
 from ..utils import create_user, get_user_by_email
 from sqlalchemy.ext.asyncio import AsyncSession

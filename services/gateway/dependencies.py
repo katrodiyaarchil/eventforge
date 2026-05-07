@@ -4,7 +4,7 @@ from fastapi.exceptions import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from .database import _get_db
 from .security import CryptContext
-from .schema import JWTPayload
+from .models import JWTPayload
 from .db_models import User
 from .utils import get_user_by_id
 from typing import Annotated
