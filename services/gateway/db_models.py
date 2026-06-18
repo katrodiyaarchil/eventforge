@@ -5,8 +5,8 @@ from sqlalchemy import String, func, DateTime, Boolean, ForeignKey
 from uuid import UUID, uuid4
 from datetime import datetime
 from typing import Any
-from common.models import OutBoxStatus, TransactionStatus
-from .models import KYCStatus, AccountStatus, AccountType, AccountAccessRole
+from common.models import OutBoxStatus, TransactionStatus, AccountStatus, AccountType
+from .models import KYCStatus, AccountAccessRole
 
 class Base(DeclarativeBase):
     pass

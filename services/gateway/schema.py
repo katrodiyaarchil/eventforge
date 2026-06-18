@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, EmailStr, SecretStr, ConfigDict
-from .models import AccountType, AccountStatus
+from common.models import AccountType, AccountStatus, AccountCreatedV1
 
 class UserRegisterRequest(BaseModel):
     first_name: str = Field(..., max_length=20)
@@ -20,3 +20,13 @@ class UserLoginRequest(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = Field(default="bearer")
+
+
+class AccountCreateRequest(BaseModel):
+    account_type: AccountType
+
+
+class AccountResponse(BaseModel):
+    account_id: str
+    account_type: AccountType
+    account_status: AccountStatus

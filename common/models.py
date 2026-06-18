@@ -83,13 +83,31 @@ class ScoredTransactionV1(RawTransactionV1):
 
 
 """ Model for settled transactions """
-
-
 class TransactionSettledV1(BaseModel):
     from_account_id: UUID
     transaction_id: UUID
     amount_cents: int
     final_status: TransactionStatus
     reason: str | None = None
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+
+class AccountType(str, Enum):
+    CHECKING = "CHECKING"
+    SAVINGS = "SAVINGS"
+
+
+class AccountStatus(str, Enum):
+    ACTIVE = "ACTIVE"
+    FROZEN = "FROZEN"
+    CLOSED = "CLOSED"
+
+
+class AccountCreatedV1(BaseModel):
+    account_id: UUID
+    user_id: UUID
+    account_type: AccountType
+    account_status: AccountStatus
 
     model_config = ConfigDict(frozen=True, extra="forbid")

@@ -7,14 +7,6 @@ class KYCStatus(str, Enum):
     APPROVED = "APPROVED"
     REJECTED = "REJECTED"
 
-class AccountType(str, Enum):
-    CHECKING = "CHECKING"
-    SAVINGS = "SAVINGS"
-
-class AccountStatus(str, Enum):
-    ACTIVE = "ACTIVE"
-    FROZEN = "FROZEN"
-    CLOSED = "CLOSED"
 
 class AccountAccessRole(str, Enum):
     OWNER = "OWNER"

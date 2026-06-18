@@ -87,6 +87,7 @@ services:
       - GATEWAY_DB_NAME=eventforge_gateway
       - REDIS_URL=redis://redis:6379/0
       - KAFKA_TOPIC_TRANSACTIONS_RAW=transactions.raw
+      - KAFKA_TOPIC_ACCOUNTS_CREATED=accounts.created
 
   relay:
     build:

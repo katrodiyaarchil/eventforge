@@ -14,6 +14,8 @@ import redis.asyncio as redis
 from sqlalchemy.exc import IntegrityError
 from fastapi.encoders import jsonable_encoder
 
+from .routers import accounts, auth
+
 logger = logging.getLogger(__name__)
 
 
@@ -30,6 +32,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+app.include_router(accounts.router)
+app.include_router(auth.router)
 
 @app.post("/transactions")
 async def create_transaction(
